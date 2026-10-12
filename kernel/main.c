@@ -12,3 +12,22 @@
  *  2. entry.S 里的陷阱向量标号前加 .balign 4(mtvec 要求 4 字节对齐,
  *     不满足时写入会被硬件静默丢弃)。
  */
+/* lab1 - 进入 S 态后打印个性化 banner 与自检序列 */
+#include "types.h"
+#include "course_sid.h"
+
+void printf(const char *fmt, ...);
+
+void
+main(void)
+{
+  /* banner 行 + 自检序列：学号十进制 与 (学号 % 97) 的十六进制。
+   * 逐字节的 '.' 转义由 printf → line_putc 这一层统一施加，
+   * 所以这里只需要按"明文"写一行。 */
+  printf("OSLAB1 sid=%ld mod97=0x%x\n",
+         (long)COURSE_SID, (unsigned)(COURSE_SID % 97));
+
+  /* lab1 没有调度器：打印完原地空转（进程/调度是 lab4 的内容） */
+  for (;;)
+    ;
+}

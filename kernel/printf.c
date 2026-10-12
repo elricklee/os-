@@ -12,3 +12,98 @@
  *  2. entry.S 里的陷阱向量标号前加 .balign 4(mtvec 要求 4 字节对齐,
  *     不满足时写入会被硬件静默丢弃)。
  */
+/* lab1 - 最小 printf：%d %x %s %c %p %% 与 %l 长度修饰 */
+#include <stdarg.h>
+#include "types.h"
+
+void line_putc(char c);
+
+static const char digits[] = "0123456789abcdef";
+
+static void
+printnum(unsigned long long x, int base)
+{
+  char buf[24];
+  int i = 0;
+
+  if (x == 0)
+    buf[i++] = '0';
+  while (x > 0) {
+    buf[i++] = digits[x % base];
+    x /= base;
+  }
+  while (i-- > 0)
+    line_putc(buf[i]);
+}
+
+static void
+printint(long long xx, int base, int sign)
+{
+  if (sign && xx < 0) {
+    line_putc('-');
+    printnum((unsigned long long)-xx, base);
+  } else {
+    printnum((unsigned long long)xx, base);
+  }
+}
+
+static void
+printptr(unsigned long long x)
+{
+  line_putc('0');
+  line_putc('x');
+  for (int i = 15; i >= 0; i--)
+    line_putc(digits[(x >> (i * 4)) & 0xf]);
+}
+
+void
+printf(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+
+  for (const char *p = fmt; *p != 0; p++) {
+    if (*p != '%') {
+      line_putc(*p);
+      continue;
+    }
+    p++;
+    int l = 0;
+    if (*p == 'l') {             /* %ld / %lx */
+      l = 1;
+      p++;
+    }
+    switch (*p) {
+    case 'd':
+      if (l) printint(va_arg(ap, long), 10, 1);
+      else   printint(va_arg(ap, int), 10, 1);
+      break;
+    case 'x':
+      if (l) printint(va_arg(ap, unsigned long), 16, 0);
+      else   printint(va_arg(ap, unsigned int), 16, 0);
+      break;
+    case 'p':
+      printptr(va_arg(ap, unsigned long long));
+      break;
+    case 's': {
+      char *s = va_arg(ap, char *);
+      if (s == 0)
+        s = "(null)";
+      while (*s)
+        line_putc(*s++);
+      break;
+    }
+    case 'c':
+      line_putc((char)va_arg(ap, int));
+      break;
+    case '%':
+      line_putc('%');
+      break;
+    default:                     /* 未知格式原样输出，不崩溃 */
+      line_putc('%');
+      line_putc(*p);
+      break;
+    }
+  }
+  va_end(ap);
+}
